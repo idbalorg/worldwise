@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from 'react'
 import styles from '../components/Map.module.css'
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import { useCities } from '../contexts/CitiesContext';
+import { useGeolocation } from '../hooks/useGeolocate';
+import Button from './Button';
+import { useUrlPosition } from '../hooks/useUrlPosition';
 
 function Map() {
   const {cities} = useCities()
 
   const [mapPosition, setMapPosition] = useState([40, 0])
-  const [searchParams, setSearchParams] = useSearchParams()
-  const mapLat = searchParams.get('lat')
-  const mapLng = searchParams.get('lng')
+  const [mapLat, mapLng] = useUrlPosition()
+
+  const {
+    isLoading : isLoadingPosition,
+    position : geolocationPosition,
+    getPosition ,
+  } = useGeolocation()
 
   useEffect(()=>{
     if(mapLat && mapLng) {
@@ -19,6 +26,10 @@ function Map() {
   },
   [mapLat, mapLng])
 
+  useEffect(()=>{
+    if(geolocationPosition) setMapPosition([geolocationPosition.lat, geolocationPosition.lng])
+  },[geolocationPosition])
+
   return (
     <div className={styles.mapContainer} >
        <MapContainer 
@@ -26,6 +37,8 @@ function Map() {
        center={mapPosition} 
        zoom={13} 
        scrollWheelZoom={true}>
+      <Button onClick={getPosition} type='position'>{isLoadingPosition ? "...Loading" :'USE YOUR POSITION'}</Button>
+
     <TileLayer
     
       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -41,7 +54,9 @@ function Map() {
       position={mapPosition}
     />
     <PopUpform/>
+
   </MapContainer>
+
     </div>
   )
 }
@@ -52,14 +67,13 @@ function ChangePosition({position}) {
  return null
 }
 
-function PopUpform(params) {
+function PopUpform() {
   const navigate = useNavigate()
 
   
   useMapEvents({
     click : (e)=>{
       navigate(`form?lat=${e.latlng.lat}&lng=${e.latlng.lng}`)
-      console.log(e)
     }}
     
   )
